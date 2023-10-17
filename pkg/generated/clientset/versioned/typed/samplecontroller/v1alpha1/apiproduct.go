@@ -26,8 +26,8 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
-	v1alpha1 "k8s.io/sample-controller/pkg/apis/samplecontroller/v1alpha1"
-	scheme "k8s.io/sample-controller/pkg/generated/clientset/versioned/scheme"
+	v1alpha1 "k8s.io/api-controller/pkg/apis/samplecontroller/v1alpha1"
+	scheme "k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
 )
 
 // ApiProductsGetter has a method to return a ApiProductInterface.

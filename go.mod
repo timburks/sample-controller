@@ -1,14 +1,14 @@
 // This is a generated file. Do not edit directly.
 
-module k8s.io/sample-controller
+module k8s.io/api-controller
 
 go 1.20
 
 require (
-	k8s.io/api v0.0.0-20231012231205-fd486f224bc0
-	k8s.io/apimachinery v0.0.0-20231012230749-e04f17b08d1d
-	k8s.io/client-go v0.0.0-20231012231734-bc7002f524b2
-	k8s.io/code-generator v0.0.0-20231012230429-4e309d6c71ad
+	k8s.io/api v0.28.2
+	k8s.io/apimachinery v0.28.2
+	k8s.io/client-go v0.28.2
+	k8s.io/code-generator v0.28.2
 	k8s.io/klog/v2 v2.100.1
 )
 

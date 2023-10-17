@@ -1,9 +1,9 @@
-# sample-controller
+# api-controller
 
 This repository implements a simple controller for watching Foo resources as
 defined with a CustomResourceDefinition (CRD).
 
-**Note:** go-get or vendor this package as `k8s.io/sample-controller`.
+**Note:** go-get or vendor this package as `k8s.io/api-controller`.
 
 This particular example demonstrates how to perform basic operations such as:
 
@@ -31,9 +31,9 @@ The sample controller uses [client-go library](https://github.com/kubernetes/cli
 The details of interaction points of the sample controller with various mechanisms from this library are
 explained [here](docs/controller-client-go.md).
 
-## Fetch sample-controller and its dependencies
+## Fetch api-controller and its dependencies
 
-Like the rest of Kubernetes, sample-controller has used
+Like the rest of Kubernetes, api-controller has used
 [godep](https://github.com/tools/godep) and `$GOPATH` for years and is
 now adopting go 1.11 modules.  There are thus two alternative ways to
 go about fetching this demo and its dependencies.
@@ -43,8 +43,8 @@ go about fetching this demo and its dependencies.
 When NOT using go 1.11 modules, you can use the following commands.
 
 ```sh
-go get -d k8s.io/sample-controller
-cd $GOPATH/src/k8s.io/sample-controller
+go get -d k8s.io/api-controller
+cd $GOPATH/src/k8s.io/api-controller
 godep restore
 ```
 
@@ -54,8 +54,8 @@ When using go 1.11 modules (`GO111MODULE=on`), issue the following
 commands --- starting in whatever working directory you like.
 
 ```sh
-git clone https://github.com/kubernetes/sample-controller.git
-cd sample-controller
+git clone https://github.com/kubernetes/api-controller.git
+cd api-controller
 ```
 
 Note, however, that if you intend to
@@ -69,7 +69,7 @@ populate the `vendor` directory.
 If you are developing Kubernetes according to
 https://github.com/kubernetes/community/blob/master/contributors/guide/github-workflow.md
 then you already have a copy of this demo in
-`kubernetes/staging/src/k8s.io/sample-controller` and its dependencies
+`kubernetes/staging/src/k8s.io/api-controller` and its dependencies
 --- including the code generator --- are in usable locations
 (valid for all Go versions).
 
@@ -79,12 +79,12 @@ This is an example of how to build a kube-like controller with a single type.
 
 ## Running
 
-**Prerequisite**: Since the sample-controller uses `apps/v1` deployments, the Kubernetes cluster version should be greater than 1.9.
+**Prerequisite**: Since the api-controller uses `apps/v1` deployments, the Kubernetes cluster version should be greater than 1.9.
 
 ```sh
 # assumes you have a working kubeconfig, not required if operating in-cluster
-go build -o sample-controller .
-./sample-controller -kubeconfig=$HOME/.kube/config
+go build -o api-controller .
+./api-controller -kubeconfig=$HOME/.kube/config
 
 # create a CustomResourceDefinition
 kubectl create -f artifacts/examples/crd-status-subresource.yaml
@@ -172,8 +172,8 @@ k8s.io/client-go.
 
 ## Where does it come from?
 
-`sample-controller` is synced from
-https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/sample-controller.
+`api-controller` is synced from
+https://github.com/kubernetes/kubernetes/blob/master/staging/src/k8s.io/api-controller.
 Code changes are made in that location, merged into k8s.io/kubernetes and
 later synced here.
 
