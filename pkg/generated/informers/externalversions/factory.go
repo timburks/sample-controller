@@ -29,7 +29,7 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 	versioned "k8s.io/api-controller/pkg/generated/clientset/versioned"
 	internalinterfaces "k8s.io/api-controller/pkg/generated/informers/externalversions/internalinterfaces"
-	samplecontroller "k8s.io/api-controller/pkg/generated/informers/externalversions/samplecontroller"
+	apicontroller "k8s.io/api-controller/pkg/generated/informers/externalversions/apicontroller"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -253,9 +253,9 @@ type SharedInformerFactory interface {
 	// client.
 	InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer
 
-	Samplecontroller() samplecontroller.Interface
+	Apicontroller() apicontroller.Interface
 }
 
-func (f *sharedInformerFactory) Samplecontroller() samplecontroller.Interface {
-	return samplecontroller.New(f, f.namespace, f.tweakListOptions)
+func (f *sharedInformerFactory) Apicontroller() apicontroller.Interface {
+	return apicontroller.New(f, f.namespace, f.tweakListOptions)
 }

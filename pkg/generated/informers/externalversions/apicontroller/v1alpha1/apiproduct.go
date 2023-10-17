@@ -26,10 +26,10 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	samplecontrollerv1alpha1 "k8s.io/api-controller/pkg/apis/samplecontroller/v1alpha1"
+	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	versioned "k8s.io/api-controller/pkg/generated/clientset/versioned"
 	internalinterfaces "k8s.io/api-controller/pkg/generated/informers/externalversions/internalinterfaces"
-	v1alpha1 "k8s.io/api-controller/pkg/generated/listers/samplecontroller/v1alpha1"
+	v1alpha1 "k8s.io/api-controller/pkg/generated/listers/apicontroller/v1alpha1"
 )
 
 // ApiProductInformer provides access to a shared informer and lister for
@@ -62,16 +62,16 @@ func NewFilteredApiProductInformer(client versioned.Interface, namespace string,
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SamplecontrollerV1alpha1().ApiProducts(namespace).List(context.TODO(), options)
+				return client.ApicontrollerV1alpha1().ApiProducts(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.SamplecontrollerV1alpha1().ApiProducts(namespace).Watch(context.TODO(), options)
+				return client.ApicontrollerV1alpha1().ApiProducts(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&samplecontrollerv1alpha1.ApiProduct{},
+		&apicontrollerv1alpha1.ApiProduct{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,7 +82,7 @@ func (f *apiProductInformer) defaultInformer(client versioned.Interface, resyncP
 }
 
 func (f *apiProductInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&samplecontrollerv1alpha1.ApiProduct{}, f.defaultInformer)
+	return f.factory.InformerFor(&apicontrollerv1alpha1.ApiProduct{}, f.defaultInformer)
 }
 
 func (f *apiProductInformer) Lister() v1alpha1.ApiProductLister {

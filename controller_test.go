@@ -33,7 +33,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2/ktesting"
 
-	samplecontroller "k8s.io/api-controller/pkg/apis/samplecontroller/v1alpha1"
+	apicontroller "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	"k8s.io/api-controller/pkg/generated/clientset/versioned/fake"
 	informers "k8s.io/api-controller/pkg/generated/informers/externalversions"
 )
@@ -49,7 +49,7 @@ type fixture struct {
 	client     *fake.Clientset
 	kubeclient *k8sfake.Clientset
 	// Objects to put in the store.
-	apiProductLister []*samplecontroller.ApiProduct
+	apiProductLister []*apicontroller.ApiProduct
 	// Actions expected to happen on the client.
 	kubeactions []core.Action
 	actions     []core.Action
@@ -66,14 +66,14 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-func newApiProduct(name string, replicas *int32) *samplecontroller.ApiProduct {
-	return &samplecontroller.ApiProduct{
-		TypeMeta: metav1.TypeMeta{APIVersion: samplecontroller.SchemeGroupVersion.String()},
+func newApiProduct(name string, replicas *int32) *apicontroller.ApiProduct {
+	return &apicontroller.ApiProduct{
+		TypeMeta: metav1.TypeMeta{APIVersion: apicontroller.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: samplecontroller.ApiProductSpec{
+		Spec: apicontroller.ApiProductSpec{
 			Title:       "Sample API Product",
 			Description: "A sample API Product.",
 		},
@@ -88,13 +88,13 @@ func (f *fixture) newController(ctx context.Context) (*Controller, informers.Sha
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
 
 	c := NewController(ctx, f.kubeclient, f.client,
-		i.Samplecontroller().V1alpha1().ApiProducts())
+		i.Apicontroller().V1alpha1().ApiProducts())
 
 	c.apiProductsSynced = alwaysReady
 	c.recorder = &record.FakeRecorder{}
 
 	for _, f := range f.apiProductLister {
-		i.Samplecontroller().V1alpha1().ApiProducts().Informer().GetIndexer().Add(f)
+		i.Apicontroller().V1alpha1().ApiProducts().Informer().GetIndexer().Add(f)
 	}
 
 	return c, i, k8sI
@@ -203,12 +203,12 @@ func filterInformerActions(actions []core.Action) []core.Action {
 	return ret
 }
 
-func (f *fixture) expectUpdateApiProductStatusAction(apiProduct *samplecontroller.ApiProduct) {
+func (f *fixture) expectUpdateApiProductStatusAction(apiProduct *apicontroller.ApiProduct) {
 	action := core.NewUpdateSubresourceAction(schema.GroupVersionResource{Resource: "apiproducts"}, "status", apiProduct.Namespace, apiProduct)
 	f.actions = append(f.actions, action)
 }
 
-func getKey(apiProduct *samplecontroller.ApiProduct, t *testing.T) string {
+func getKey(apiProduct *apicontroller.ApiProduct, t *testing.T) string {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(apiProduct)
 	if err != nil {
 		t.Errorf("Unexpected error getting key for apiProduct %v: %v", apiProduct.Name, err)

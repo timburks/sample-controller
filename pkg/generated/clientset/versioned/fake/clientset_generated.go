@@ -25,8 +25,8 @@ import (
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
 	clientset "k8s.io/api-controller/pkg/generated/clientset/versioned"
-	samplecontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/samplecontroller/v1alpha1"
-	fakesamplecontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/samplecontroller/v1alpha1/fake"
+	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
+	fakeapicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -79,7 +79,7 @@ var (
 	_ testing.FakeClient  = &Clientset{}
 )
 
-// SamplecontrollerV1alpha1 retrieves the SamplecontrollerV1alpha1Client
-func (c *Clientset) SamplecontrollerV1alpha1() samplecontrollerv1alpha1.SamplecontrollerV1alpha1Interface {
-	return &fakesamplecontrollerv1alpha1.FakeSamplecontrollerV1alpha1{Fake: &c.Fake}
+// ApicontrollerV1alpha1 retrieves the ApicontrollerV1alpha1Client
+func (c *Clientset) ApicontrollerV1alpha1() apicontrollerv1alpha1.ApicontrollerV1alpha1Interface {
+	return &fakeapicontrollerv1alpha1.FakeApicontrollerV1alpha1{Fake: &c.Fake}
 }

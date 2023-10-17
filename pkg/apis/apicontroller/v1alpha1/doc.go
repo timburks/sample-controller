@@ -14,9 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package samplecontroller
+// +k8s:deepcopy-gen=package
+// +groupName=apicontroller.k8s.io
 
-// GroupName is the group name used in this package
-const (
-	GroupName = "apigee.dev"
-)
+// Package v1alpha1 is the v1alpha1 version of the API.
+package v1alpha1 // import "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"

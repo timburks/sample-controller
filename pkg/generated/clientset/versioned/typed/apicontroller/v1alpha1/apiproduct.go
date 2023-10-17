@@ -26,7 +26,7 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
-	v1alpha1 "k8s.io/api-controller/pkg/apis/samplecontroller/v1alpha1"
+	v1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	scheme "k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
 )
 
@@ -57,7 +57,7 @@ type apiProducts struct {
 }
 
 // newApiProducts returns a ApiProducts
-func newApiProducts(c *SamplecontrollerV1alpha1Client, namespace string) *apiProducts {
+func newApiProducts(c *ApicontrollerV1alpha1Client, namespace string) *apiProducts {
 	return &apiProducts{
 		client: c.RESTClient(),
 		ns:     namespace,

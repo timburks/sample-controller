@@ -18,7 +18,7 @@ do this yourself using the `./hack/update-codegen.sh` script.
 The `update-codegen` script will automatically generate the following files &
 directories:
 
-* `pkg/apis/samplecontroller/v1alpha1/zz_generated.deepcopy.go`
+* `pkg/apis/apicontroller/v1alpha1/zz_generated.deepcopy.go`
 * `pkg/generated/`
 
 Changes should not be made to these files manually, and when creating your own
@@ -162,7 +162,7 @@ The [group](https://kubernetes.io/docs/reference/using-api/#api-groups) version 
 
 You can clean up the created CustomResourceDefinition with:
 ```sh
-kubectl delete crd foos.samplecontroller.k8s.io
+kubectl delete crd foos.apicontroller.k8s.io
 ```
 
 ## Compatibility
