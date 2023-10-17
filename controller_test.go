@@ -88,7 +88,7 @@ func (f *fixture) newController(ctx context.Context) (*Controller, informers.Sha
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
 
 	c := NewController(ctx, f.kubeclient, f.client,
-		k8sI.Apps().V1().Deployments(), i.Samplecontroller().V1alpha1().ApiProducts())
+		i.Samplecontroller().V1alpha1().ApiProducts())
 
 	c.apiProductsSynced = alwaysReady
 	c.recorder = &record.FakeRecorder{}
