@@ -34,9 +34,9 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	samplev1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
+	apiv1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	clientset "k8s.io/api-controller/pkg/generated/clientset/versioned"
-	samplescheme "k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
+	apischeme "k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
 	informers "k8s.io/api-controller/pkg/generated/informers/externalversions/apicontroller/v1alpha1"
 	listers "k8s.io/api-controller/pkg/generated/listers/apicontroller/v1alpha1"
 )
@@ -90,7 +90,7 @@ func NewController(
 	// Create event broadcaster
 	// Add api-controller types to the default Kubernetes Scheme so Events can be
 	// logged for api-controller types.
-	utilruntime.Must(samplescheme.AddToScheme(scheme.Scheme))
+	utilruntime.Must(apischeme.AddToScheme(scheme.Scheme))
 	logger.V(4).Info("Creating event broadcaster")
 
 	eventBroadcaster := record.NewBroadcaster()
@@ -255,7 +255,7 @@ func (c *Controller) syncHandler(ctx context.Context, key string) error {
 	return nil
 }
 
-func (c *Controller) updateApiProductStatus(apiProduct *samplev1alpha1.ApiProduct) error {
+func (c *Controller) updateApiProductStatus(apiProduct *apiv1alpha1.ApiProduct) error {
 	// NEVER modify objects from the store. It's a read-only, local cache.
 	// You can use DeepCopy() to make a deep copy of original object and modify this copy
 	// Or create a copy manually for better performance
