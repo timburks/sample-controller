@@ -18,5 +18,5 @@ package samplecontroller
 
 // GroupName is the group name used in this package
 const (
-	GroupName = "apiregistry.dev"
+	GroupName = "apigee.dev"
 )
