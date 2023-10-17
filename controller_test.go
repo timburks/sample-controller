@@ -18,12 +18,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	apps "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,8 +49,7 @@ type fixture struct {
 	client     *fake.Clientset
 	kubeclient *k8sfake.Clientset
 	// Objects to put in the store.
-	fooLister        []*samplecontroller.Foo
-	deploymentLister []*apps.Deployment
+	apiProductLister []*samplecontroller.ApiProduct
 	// Actions expected to happen on the client.
 	kubeactions []core.Action
 	actions     []core.Action
@@ -69,16 +66,16 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-func newFoo(name string, replicas *int32) *samplecontroller.Foo {
-	return &samplecontroller.Foo{
+func newApiProduct(name string, replicas *int32) *samplecontroller.ApiProduct {
+	return &samplecontroller.ApiProduct{
 		TypeMeta: metav1.TypeMeta{APIVersion: samplecontroller.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: metav1.NamespaceDefault,
 		},
-		Spec: samplecontroller.FooSpec{
-			DeploymentName: fmt.Sprintf("%s-deployment", name),
-			Replicas:       replicas,
+		Spec: samplecontroller.ApiProductSpec{
+			Title:       "Sample API Product",
+			Description: "A sample API Product.",
 		},
 	}
 }
@@ -91,43 +88,38 @@ func (f *fixture) newController(ctx context.Context) (*Controller, informers.Sha
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
 
 	c := NewController(ctx, f.kubeclient, f.client,
-		k8sI.Apps().V1().Deployments(), i.Samplecontroller().V1alpha1().Foos())
+		k8sI.Apps().V1().Deployments(), i.Samplecontroller().V1alpha1().ApiProducts())
 
-	c.foosSynced = alwaysReady
-	c.deploymentsSynced = alwaysReady
+	c.apiProductsSynced = alwaysReady
 	c.recorder = &record.FakeRecorder{}
 
-	for _, f := range f.fooLister {
-		i.Samplecontroller().V1alpha1().Foos().Informer().GetIndexer().Add(f)
-	}
-
-	for _, d := range f.deploymentLister {
-		k8sI.Apps().V1().Deployments().Informer().GetIndexer().Add(d)
+	for _, f := range f.apiProductLister {
+		i.Samplecontroller().V1alpha1().ApiProducts().Informer().GetIndexer().Add(f)
 	}
 
 	return c, i, k8sI
 }
 
-func (f *fixture) run(ctx context.Context, fooName string) {
-	f.runController(ctx, fooName, true, false)
+func (f *fixture) run(ctx context.Context, apiProductName string) {
+	f.runController(ctx, apiProductName, true, false)
 }
 
-func (f *fixture) runExpectError(ctx context.Context, fooName string) {
-	f.runController(ctx, fooName, true, true)
+func (f *fixture) runExpectError(ctx context.Context, apiProductName string) {
+	f.runController(ctx, apiProductName, true, true)
 }
 
-func (f *fixture) runController(ctx context.Context, fooName string, startInformers bool, expectError bool) {
+func (f *fixture) runController(ctx context.Context, apiProductName string, startInformers bool, expectError bool) {
 	c, i, k8sI := f.newController(ctx)
 	if startInformers {
 		i.Start(ctx.Done())
 		k8sI.Start(ctx.Done())
 	}
 
-	err := c.syncHandler(ctx, fooName)
+	err := c.syncHandler(ctx, apiProductName)
 	if !expectError && err != nil {
-		f.t.Errorf("error syncing foo: %v", err)
+		f.t.Errorf("error syncing apiProduct: %v", err)
 	} else if expectError && err == nil {
-		f.t.Error("expected error syncing foo, got nil")
+		f.t.Error("expected error syncing apiProduct, got nil")
 	}
 
 	actions := filterInformerActions(f.client.Actions())
@@ -145,20 +137,6 @@ func (f *fixture) runController(ctx context.Context, fooName string, startInform
 		f.t.Errorf("%d additional expected actions:%+v", len(f.actions)-len(actions), f.actions[len(actions):])
 	}
 
-	k8sActions := filterInformerActions(f.kubeclient.Actions())
-	for i, action := range k8sActions {
-		if len(f.kubeactions) < i+1 {
-			f.t.Errorf("%d unexpected actions: %+v", len(k8sActions)-len(f.kubeactions), k8sActions[i:])
-			break
-		}
-
-		expectedAction := f.kubeactions[i]
-		checkAction(expectedAction, action, f.t)
-	}
-
-	if len(f.kubeactions) > len(k8sActions) {
-		f.t.Errorf("%d additional expected actions:%+v", len(f.kubeactions)-len(k8sActions), f.kubeactions[len(k8sActions):])
-	}
 }
 
 // checkAction verifies that expected and actual actions are equal and both have
@@ -215,10 +193,8 @@ func filterInformerActions(actions []core.Action) []core.Action {
 	ret := []core.Action{}
 	for _, action := range actions {
 		if len(action.GetNamespace()) == 0 &&
-			(action.Matches("list", "foos") ||
-				action.Matches("watch", "foos") ||
-				action.Matches("list", "deployments") ||
-				action.Matches("watch", "deployments")) {
+			(action.Matches("list", "apiproducts") ||
+				action.Matches("watch", "apiproducts")) {
 			continue
 		}
 		ret = append(ret, action)
@@ -227,23 +203,15 @@ func filterInformerActions(actions []core.Action) []core.Action {
 	return ret
 }
 
-func (f *fixture) expectCreateDeploymentAction(d *apps.Deployment) {
-	f.kubeactions = append(f.kubeactions, core.NewCreateAction(schema.GroupVersionResource{Resource: "deployments"}, d.Namespace, d))
-}
-
-func (f *fixture) expectUpdateDeploymentAction(d *apps.Deployment) {
-	f.kubeactions = append(f.kubeactions, core.NewUpdateAction(schema.GroupVersionResource{Resource: "deployments"}, d.Namespace, d))
-}
-
-func (f *fixture) expectUpdateFooStatusAction(foo *samplecontroller.Foo) {
-	action := core.NewUpdateSubresourceAction(schema.GroupVersionResource{Resource: "foos"}, "status", foo.Namespace, foo)
+func (f *fixture) expectUpdateApiProductStatusAction(apiProduct *samplecontroller.ApiProduct) {
+	action := core.NewUpdateSubresourceAction(schema.GroupVersionResource{Resource: "apiproducts"}, "status", apiProduct.Namespace, apiProduct)
 	f.actions = append(f.actions, action)
 }
 
-func getKey(foo *samplecontroller.Foo, t *testing.T) string {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(foo)
+func getKey(apiProduct *samplecontroller.ApiProduct, t *testing.T) string {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(apiProduct)
 	if err != nil {
-		t.Errorf("Unexpected error getting key for foo %v: %v", foo.Name, err)
+		t.Errorf("Unexpected error getting key for apiProduct %v: %v", apiProduct.Name, err)
 		return ""
 	}
 	return key
@@ -251,71 +219,29 @@ func getKey(foo *samplecontroller.Foo, t *testing.T) string {
 
 func TestCreatesDeployment(t *testing.T) {
 	f := newFixture(t)
-	foo := newFoo("test", int32Ptr(1))
+	apiProduct := newApiProduct("test", int32Ptr(1))
 	_, ctx := ktesting.NewTestContext(t)
 
-	f.fooLister = append(f.fooLister, foo)
-	f.objects = append(f.objects, foo)
+	f.apiProductLister = append(f.apiProductLister, apiProduct)
+	f.objects = append(f.objects, apiProduct)
 
-	expDeployment := newDeployment(foo)
-	f.expectCreateDeploymentAction(expDeployment)
-	f.expectUpdateFooStatusAction(foo)
+	apiProduct.Status.Message = "ok"
+	f.expectUpdateApiProductStatusAction(apiProduct)
 
-	f.run(ctx, getKey(foo, t))
+	f.run(ctx, getKey(apiProduct, t))
 }
 
 func TestDoNothing(t *testing.T) {
 	f := newFixture(t)
-	foo := newFoo("test", int32Ptr(1))
+	apiProduct := newApiProduct("test", int32Ptr(1))
 	_, ctx := ktesting.NewTestContext(t)
 
-	d := newDeployment(foo)
+	f.apiProductLister = append(f.apiProductLister, apiProduct)
+	f.objects = append(f.objects, apiProduct)
 
-	f.fooLister = append(f.fooLister, foo)
-	f.objects = append(f.objects, foo)
-	f.deploymentLister = append(f.deploymentLister, d)
-	f.kubeobjects = append(f.kubeobjects, d)
-
-	f.expectUpdateFooStatusAction(foo)
-	f.run(ctx, getKey(foo, t))
-}
-
-func TestUpdateDeployment(t *testing.T) {
-	f := newFixture(t)
-	foo := newFoo("test", int32Ptr(1))
-	_, ctx := ktesting.NewTestContext(t)
-
-	d := newDeployment(foo)
-
-	// Update replicas
-	foo.Spec.Replicas = int32Ptr(2)
-	expDeployment := newDeployment(foo)
-
-	f.fooLister = append(f.fooLister, foo)
-	f.objects = append(f.objects, foo)
-	f.deploymentLister = append(f.deploymentLister, d)
-	f.kubeobjects = append(f.kubeobjects, d)
-
-	f.expectUpdateFooStatusAction(foo)
-	f.expectUpdateDeploymentAction(expDeployment)
-	f.run(ctx, getKey(foo, t))
-}
-
-func TestNotControlledByUs(t *testing.T) {
-	f := newFixture(t)
-	foo := newFoo("test", int32Ptr(1))
-	_, ctx := ktesting.NewTestContext(t)
-
-	d := newDeployment(foo)
-
-	d.ObjectMeta.OwnerReferences = []metav1.OwnerReference{}
-
-	f.fooLister = append(f.fooLister, foo)
-	f.objects = append(f.objects, foo)
-	f.deploymentLister = append(f.deploymentLister, d)
-	f.kubeobjects = append(f.kubeobjects, d)
-
-	f.runExpectError(ctx, getKey(foo, t))
+	apiProduct.Status.Message = "ok"
+	f.expectUpdateApiProductStatusAction(apiProduct)
+	f.run(ctx, getKey(apiProduct, t))
 }
 
 func int32Ptr(i int32) *int32 { return &i }
