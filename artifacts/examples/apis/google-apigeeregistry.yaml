@@ -1,0 +1,35 @@
+apiVersion: apiregistry.dev/v1alpha1
+kind: ApiProduct
+metadata:
+  name: google-apigeeregistry
+spec:
+  title: "Apigee Registry API"
+  description: "Manage API descriptions and metadata"
+---
+apiVersion: apiregistry.dev/v1alpha1
+kind: ApiVersion
+metadata:
+  name: google-apigeeregistry-v1
+spec:
+  title: "Apigee Registry API v1"
+  description: "Manage API descriptions and metadata"
+  parent: apiproducts/google-apigeeregistry
+---
+apiVersion: apiregistry.dev/v1alpha1
+kind: ApiDescription
+metadata:
+  name: google-apigeeregistry-v1-openapi
+spec:
+  title: "Apigee Registry API v1 OpenAPI description"
+  description: "Manage API descriptions and metadata"
+  parent: apiversions/google-apigeeregistry-v1
+---
+apiVersion: apiregistry.dev/v1alpha1
+kind: ApiDeployment
+metadata:
+  name: google-apigeeregistry-prod
+spec:
+  title: "Apigee Registry API Production Endpoint"
+  description: "Manage API descriptions and metadata"
+  parent: apiproducts/google-apigeeregistry
+---
