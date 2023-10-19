@@ -57,25 +57,25 @@ func main() {
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	exampleClient, err := clientset.NewForConfig(cfg)
+	customClient, err := clientset.NewForConfig(cfg)
 	if err != nil {
 		logger.Error(err, "Error building kubernetes clientset")
 		klog.FlushAndExit(klog.ExitFlushTimeout, 1)
 	}
 
-	exampleInformerFactory := informers.NewSharedInformerFactory(exampleClient, time.Second*30)
+	customInformerFactory := informers.NewSharedInformerFactory(customClient, time.Second*30)
 
-	controller := NewController(ctx, kubeClient, exampleClient,
-		exampleInformerFactory.Apicontroller().V1alpha1().ApiProducts(),
-		exampleInformerFactory.Apicontroller().V1alpha1().ApiVersions(),
-		exampleInformerFactory.Apicontroller().V1alpha1().ApiDescriptions(),
-		exampleInformerFactory.Apicontroller().V1alpha1().ApiDeployments(),
-		exampleInformerFactory.Apicontroller().V1alpha1().ApiArtifacts(),
+	controller := NewController(ctx, kubeClient, customClient,
+		customInformerFactory.Apicontroller().V1alpha1().ApiProducts(),
+		customInformerFactory.Apicontroller().V1alpha1().ApiVersions(),
+		customInformerFactory.Apicontroller().V1alpha1().ApiDescriptions(),
+		customInformerFactory.Apicontroller().V1alpha1().ApiDeployments(),
+		customInformerFactory.Apicontroller().V1alpha1().ApiArtifacts(),
 	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(ctx.done())
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
-	exampleInformerFactory.Start(ctx.Done())
+	customInformerFactory.Start(ctx.Done())
 
 	if err = controller.Run(ctx, 2); err != nil {
 		logger.Error(err, "Error running controller")
