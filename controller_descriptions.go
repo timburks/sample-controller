@@ -129,3 +129,16 @@ func (c *Controller) updateApiDescriptionStatus(apiDescription *apiv1alpha1.ApiD
 	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiDescriptions(apiDescription.Namespace).UpdateStatus(context.TODO(), apiDescriptionCopy, metav1.UpdateOptions{})
 	return err
 }
+
+// enqueueApiDescription takes an ApiDescription resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiDescription.
+func (c *Controller) enqueueApiDescription(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.descriptionsWorkqueue.Add(key)
+}

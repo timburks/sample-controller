@@ -129,3 +129,16 @@ func (c *Controller) updateApiVersionStatus(apiVersion *apiv1alpha1.ApiVersion) 
 	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiVersions(apiVersion.Namespace).UpdateStatus(context.TODO(), apiVersionCopy, metav1.UpdateOptions{})
 	return err
 }
+
+// enqueueApiVersion takes an ApiVersion resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiVersion.
+func (c *Controller) enqueueApiVersion(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.versionsWorkqueue.Add(key)
+}

@@ -129,3 +129,16 @@ func (c *Controller) updateApiDeploymentStatus(apiDeployment *apiv1alpha1.ApiDep
 	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiDeployments(apiDeployment.Namespace).UpdateStatus(context.TODO(), apiDeploymentCopy, metav1.UpdateOptions{})
 	return err
 }
+
+// enqueueApiDeployment takes an ApiDeployment resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiDeployment.
+func (c *Controller) enqueueApiDeployment(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.deploymentsWorkqueue.Add(key)
+}

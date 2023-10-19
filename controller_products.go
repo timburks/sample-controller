@@ -129,3 +129,16 @@ func (c *Controller) updateApiProductStatus(apiProduct *apiv1alpha1.ApiProduct) 
 	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiProducts(apiProduct.Namespace).UpdateStatus(context.TODO(), apiProductCopy, metav1.UpdateOptions{})
 	return err
 }
+
+// enqueueApiProduct takes an ApiProduct resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiProduct.
+func (c *Controller) enqueueApiProduct(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.productsWorkqueue.Add(key)
+}

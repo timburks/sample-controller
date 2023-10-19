@@ -129,3 +129,16 @@ func (c *Controller) updateApiArtifactStatus(apiArtifact *apiv1alpha1.ApiArtifac
 	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiArtifacts(apiArtifact.Namespace).UpdateStatus(context.TODO(), apiArtifactCopy, metav1.UpdateOptions{})
 	return err
 }
+
+// enqueueApiArtifact takes an ApiArtifact resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiArtifact.
+func (c *Controller) enqueueApiArtifact(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.artifactsWorkqueue.Add(key)
+}
