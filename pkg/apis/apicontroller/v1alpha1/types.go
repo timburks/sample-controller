@@ -154,3 +154,37 @@ type ApiDeploymentList struct {
 
 	Items []ApiDeployment `json:"items"`
 }
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ApiArtifact is a specification for a ApiArtifact resource
+type ApiArtifact struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ApiArtifactSpec   `json:"spec"`
+	Status ApiArtifactStatus `json:"status"`
+}
+
+// ApiArtifactSpec is the spec for a ApiArtifact resource
+type ApiArtifactSpec struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Parent      string `json:"parent"`
+}
+
+// ApiArtifactStatus is the status for a ApiArtifact resource
+type ApiArtifactStatus struct {
+	Message string `json:"message"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ApiDeploymentList is a list of ApiArtifact resources
+type ApiArtifactList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []ApiArtifact `json:"items"`
+}

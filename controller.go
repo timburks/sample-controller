@@ -22,8 +22,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +32,6 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	apiv1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	clientset "k8s.io/api-controller/pkg/generated/clientset/versioned"
 	apischeme "k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
 	informers "k8s.io/api-controller/pkg/generated/informers/externalversions/apicontroller/v1alpha1"
@@ -55,7 +52,11 @@ const (
 	MessageResourceExists = "Resource %q already exists and is not managed by ApiProduct"
 	// MessageResourceSynced is the message used for an Event fired when an ApiProduct
 	// is synced successfully
-	MessageResourceSynced = "ApiProduct synced successfully"
+	MessageProductSynced     = "ApiProduct synced successfully"
+	MessageVersionSynced     = "ApiVersion synced successfully"
+	MessageDescriptionSynced = "ApiDescription synced successfully"
+	MessageDeploymentSynced  = "ApiDeployment synced successfully"
+	MessageArtifactSynced    = "ApiArtifact synced successfully"
 )
 
 // Controller is the controller implementation for ApiProduct resources
@@ -65,15 +66,28 @@ type Controller struct {
 	// sampleclientset is a clientset for our own API group
 	sampleclientset clientset.Interface
 
-	apiProductsLister listers.ApiProductLister
-	apiProductsSynced cache.InformerSynced
+	apiProductsLister     listers.ApiProductLister
+	apiProductsSynced     cache.InformerSynced
+	apiVersionsLister     listers.ApiVersionLister
+	apiVersionsSynced     cache.InformerSynced
+	apiDescriptionsLister listers.ApiDescriptionLister
+	apiDescriptionsSynced cache.InformerSynced
+	apiDeploymentsLister  listers.ApiDeploymentLister
+	apiDeploymentsSynced  cache.InformerSynced
+	apiArtifactsLister    listers.ApiArtifactLister
+	apiArtifactsSynced    cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
 	// processed instead of performing it as soon as a change happens. This
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
-	workqueue workqueue.RateLimitingInterface
+	productsWorkqueue     workqueue.RateLimitingInterface
+	versionsWorkqueue     workqueue.RateLimitingInterface
+	descriptionsWorkqueue workqueue.RateLimitingInterface
+	deploymentsWorkqueue  workqueue.RateLimitingInterface
+	artifactsWorkqueue    workqueue.RateLimitingInterface
+
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
@@ -84,7 +98,12 @@ func NewController(
 	ctx context.Context,
 	kubeclientset kubernetes.Interface,
 	sampleclientset clientset.Interface,
-	apiProductInformer informers.ApiProductInformer) *Controller {
+	apiProductInformer informers.ApiProductInformer,
+	apiVersionInformer informers.ApiVersionInformer,
+	apiDescriptionInformer informers.ApiDescriptionInformer,
+	apiDeploymentInformer informers.ApiDeploymentInformer,
+	apiArtifactInformer informers.ApiArtifactInformer,
+) *Controller {
 	logger := klog.FromContext(ctx)
 
 	// Create event broadcaster
@@ -99,12 +118,27 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:     kubeclientset,
-		sampleclientset:   sampleclientset,
-		apiProductsLister: apiProductInformer.Lister(),
-		apiProductsSynced: apiProductInformer.Informer().HasSynced,
-		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiProducts"),
-		recorder:          recorder,
+		kubeclientset:   kubeclientset,
+		sampleclientset: sampleclientset,
+
+		apiProductsLister:     apiProductInformer.Lister(),
+		apiProductsSynced:     apiProductInformer.Informer().HasSynced,
+		apiVersionsLister:     apiVersionInformer.Lister(),
+		apiVersionsSynced:     apiVersionInformer.Informer().HasSynced,
+		apiDescriptionsLister: apiDescriptionInformer.Lister(),
+		apiDescriptionsSynced: apiDescriptionInformer.Informer().HasSynced,
+		apiDeploymentsLister:  apiDeploymentInformer.Lister(),
+		apiDeploymentsSynced:  apiDeploymentInformer.Informer().HasSynced,
+		apiArtifactsLister:    apiArtifactInformer.Lister(),
+		apiArtifactsSynced:    apiArtifactInformer.Informer().HasSynced,
+
+		productsWorkqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiProducts"),
+		versionsWorkqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiVersions"),
+		descriptionsWorkqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiDescriptionss"),
+		deploymentsWorkqueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiDeployments"),
+		artifactsWorkqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiArtifacts"),
+
+		recorder: recorder,
 	}
 
 	logger.Info("Setting up event handlers")
@@ -113,6 +147,34 @@ func NewController(
 		AddFunc: controller.enqueueApiProduct,
 		UpdateFunc: func(old, new interface{}) {
 			controller.enqueueApiProduct(new)
+		},
+	})
+	// Set up an event handler for when ApiVersion resources change
+	apiVersionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueApiVersion,
+		UpdateFunc: func(old, new interface{}) {
+			controller.enqueueApiVersion(new)
+		},
+	})
+	// Set up an event handler for when ApiDescription resources change
+	apiDescriptionInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueApiDescription,
+		UpdateFunc: func(old, new interface{}) {
+			controller.enqueueApiDescription(new)
+		},
+	})
+	// Set up an event handler for when ApiDeployment resources change
+	apiDeploymentInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueApiDeployment,
+		UpdateFunc: func(old, new interface{}) {
+			controller.enqueueApiDeployment(new)
+		},
+	})
+	// Set up an event handler for when ApiArtifact resources change
+	apiArtifactInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueApiArtifact,
+		UpdateFunc: func(old, new interface{}) {
+			controller.enqueueApiArtifact(new)
 		},
 	})
 
@@ -125,11 +187,15 @@ func NewController(
 // workers to finish processing their current work items.
 func (c *Controller) Run(ctx context.Context, workers int) error {
 	defer utilruntime.HandleCrash()
-	defer c.workqueue.ShutDown()
+	defer c.productsWorkqueue.ShutDown()
+	defer c.versionsWorkqueue.ShutDown()
+	defer c.descriptionsWorkqueue.ShutDown()
+	defer c.deploymentsWorkqueue.ShutDown()
+	defer c.artifactsWorkqueue.ShutDown()
 	logger := klog.FromContext(ctx)
 
 	// Start the informer factories to begin populating the informer caches
-	logger.Info("Starting ApiProduct controller")
+	logger.Info("Starting controller")
 
 	// Wait for the caches to be synced before starting workers
 	logger.Info("Waiting for informer caches to sync")
@@ -137,11 +203,39 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiProductsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiVersionsSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiDescriptionsSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiDeploymentsSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
+	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiArtifactsSynced); !ok {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
 
 	logger.Info("Starting workers", "count", workers)
 	// Launch two workers to process ApiProduct resources
 	for i := 0; i < workers; i++ {
-		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
+		go wait.UntilWithContext(ctx, c.runProductWorker, time.Second)
+	}
+	// Launch two workers to process ApiVersion resources
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, c.runVersionWorker, time.Second)
+	}
+	// Launch two workers to process ApiDescription resources
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, c.runDescriptionWorker, time.Second)
+	}
+	// Launch two workers to process ApiDeployment resources
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, c.runDeploymentWorker, time.Second)
+	}
+	// Launch two workers to process ApiArtifact resources
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, c.runArtifactWorker, time.Second)
 	}
 
 	logger.Info("Started workers")
@@ -149,124 +243,6 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	logger.Info("Shutting down workers")
 
 	return nil
-}
-
-// runWorker is a long-running function that will continually call the
-// processNextWorkItem function in order to read and process a message on the
-// workqueue.
-func (c *Controller) runWorker(ctx context.Context) {
-	for c.processNextWorkItem(ctx) {
-	}
-}
-
-// processNextWorkItem will read a single work item off the workqueue and
-// attempt to process it, by calling the syncHandler.
-func (c *Controller) processNextWorkItem(ctx context.Context) bool {
-	obj, shutdown := c.workqueue.Get()
-	logger := klog.FromContext(ctx)
-
-	if shutdown {
-		return false
-	}
-
-	// We wrap this block in a func so we can defer c.workqueue.Done.
-	err := func(obj interface{}) error {
-		// We call Done here so the workqueue knows we have finished
-		// processing this item. We also must remember to call Forget if we
-		// do not want this work item being re-queued. For example, we do
-		// not call Forget if a transient error occurs, instead the item is
-		// put back on the workqueue and attempted again after a back-off
-		// period.
-		defer c.workqueue.Done(obj)
-		var key string
-		var ok bool
-		// We expect strings to come off the workqueue. These are of the
-		// form namespace/name. We do this as the delayed nature of the
-		// workqueue means the items in the informer cache may actually be
-		// more up to date that when the item was initially put onto the
-		// workqueue.
-		if key, ok = obj.(string); !ok {
-			// As the item in the workqueue is actually invalid, we call
-			// Forget here else we'd go into a loop of attempting to
-			// process a work item that is invalid.
-			c.workqueue.Forget(obj)
-			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
-			return nil
-		}
-		// Run the syncHandler, passing it the namespace/name string of the
-		// ApiProduct resource to be synced.
-		if err := c.syncHandler(ctx, key); err != nil {
-			// Put the item back on the workqueue to handle any transient errors.
-			c.workqueue.AddRateLimited(key)
-			return fmt.Errorf("error syncing '%s': %s, requeuing", key, err.Error())
-		}
-		// Finally, if no error occurs we Forget this item so it does not
-		// get queued again until another change happens.
-		c.workqueue.Forget(obj)
-		logger.Info("Successfully synced", "resourceName", key)
-		return nil
-	}(obj)
-
-	if err != nil {
-		utilruntime.HandleError(err)
-		return true
-	}
-
-	return true
-}
-
-// syncHandler compares the actual state with the desired, and attempts to
-// converge the two. It then updates the Status block of the ApiProduct resource
-// with the current status of the resource.
-func (c *Controller) syncHandler(ctx context.Context, key string) error {
-	// Convert the namespace/name string into a distinct namespace and name
-	logger := klog.LoggerWithValues(klog.FromContext(ctx), "resourceName", key)
-
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
-	}
-
-	// Get the ApiProduct resource with this namespace/name
-	apiProduct, err := c.apiProductsLister.ApiProducts(namespace).Get(name)
-	if err != nil {
-		// The ApiProduct resource may no longer exist, in which case we stop
-		// processing.
-		if errors.IsNotFound(err) {
-			utilruntime.HandleError(fmt.Errorf("ApiProduct '%s' in work queue no longer exists", key))
-			return nil
-		}
-
-		return err
-	}
-
-	if true {
-		logger.V(4).Info("We got this", "ApiProduct", *apiProduct)
-	}
-	// Finally, we update the status block of the ApiProduct resource to reflect the
-	// current state of the world
-	err = c.updateApiProductStatus(apiProduct)
-	if err != nil {
-		return err
-	}
-
-	c.recorder.Event(apiProduct, corev1.EventTypeNormal, SuccessSynced, MessageResourceSynced)
-	return nil
-}
-
-func (c *Controller) updateApiProductStatus(apiProduct *apiv1alpha1.ApiProduct) error {
-	// NEVER modify objects from the store. It's a read-only, local cache.
-	// You can use DeepCopy() to make a deep copy of original object and modify this copy
-	// Or create a copy manually for better performance
-	apiProductCopy := apiProduct.DeepCopy()
-	apiProductCopy.Status.Message = "ok"
-	// If the CustomResourceSubresources feature gate is not enabled,
-	// we must use Update instead of UpdateStatus to update the Status block of the ApiProduct resource.
-	// UpdateStatus will not allow changes to the Spec of the resource,
-	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiProducts(apiProduct.Namespace).UpdateStatus(context.TODO(), apiProductCopy, metav1.UpdateOptions{})
-	return err
 }
 
 // enqueueApiProduct takes an ApiProduct resource and converts it into a namespace/name
@@ -279,46 +255,57 @@ func (c *Controller) enqueueApiProduct(obj interface{}) {
 		utilruntime.HandleError(err)
 		return
 	}
-	c.workqueue.Add(key)
+	c.productsWorkqueue.Add(key)
 }
 
-// handleObject will take any resource implementing metav1.Object and attempt
-// to find the ApiProduct resource that 'owns' it. It does this by looking at the
-// objects metadata.ownerReferences field for an appropriate OwnerReference.
-// It then enqueues that ApiProduct resource to be processed. If the object does not
-// have an appropriate OwnerReference, it will simply be skipped.
-func (c *Controller) handleObject(obj interface{}) {
-	var object metav1.Object
-	var ok bool
-	logger := klog.FromContext(context.Background())
-	if object, ok = obj.(metav1.Object); !ok {
-		tombstone, ok := obj.(cache.DeletedFinalStateUnknown)
-		if !ok {
-			utilruntime.HandleError(fmt.Errorf("error decoding object, invalid type"))
-			return
-		}
-		object, ok = tombstone.Obj.(metav1.Object)
-		if !ok {
-			utilruntime.HandleError(fmt.Errorf("error decoding object tombstone, invalid type"))
-			return
-		}
-		logger.V(4).Info("Recovered deleted object", "resourceName", object.GetName())
-	}
-	logger.V(4).Info("Processing object", "object", klog.KObj(object))
-	if ownerRef := metav1.GetControllerOf(object); ownerRef != nil {
-		// If this object is not owned by an ApiProduct, we should not do anything more
-		// with it.
-		if ownerRef.Kind != "ApiProduct" {
-			return
-		}
-
-		apiProduct, err := c.apiProductsLister.ApiProducts(object.GetNamespace()).Get(ownerRef.Name)
-		if err != nil {
-			logger.V(4).Info("Ignore orphaned object", "object", klog.KObj(object), "apiproduct", ownerRef.Name)
-			return
-		}
-
-		c.enqueueApiProduct(apiProduct)
+// enqueueApiVersion takes an ApiVersion resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiVersion.
+func (c *Controller) enqueueApiVersion(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
 		return
 	}
+	c.versionsWorkqueue.Add(key)
+}
+
+// enqueueApiDescription takes an ApiDescription resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiDescription.
+func (c *Controller) enqueueApiDescription(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.descriptionsWorkqueue.Add(key)
+}
+
+// enqueueApiDeployment takes an ApiDeployment resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiDeployment.
+func (c *Controller) enqueueApiDeployment(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.deploymentsWorkqueue.Add(key)
+}
+
+// enqueueApiArtifact takes an ApiArtifact resource and converts it into a namespace/name
+// string which is then put onto the work queue. This method should *not* be
+// passed resources of any type other than ApiArtifact.
+func (c *Controller) enqueueApiArtifact(obj interface{}) {
+	var key string
+	var err error
+	if key, err = cache.MetaNamespaceKeyFunc(obj); err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	c.artifactsWorkqueue.Add(key)
 }

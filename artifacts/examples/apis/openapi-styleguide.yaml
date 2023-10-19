@@ -1,0 +1,7 @@
+apiVersion: apigee.dev/v1alpha1
+kind: ApiArtifact
+metadata:
+  name: openapi-styleguide
+spec:
+  title: "OpenAPI Style Guide"
+  description: "Style guide for REST APIs with OpenAPI descriptions"

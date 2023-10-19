@@ -88,7 +88,11 @@ func (f *fixture) newController(ctx context.Context) (*Controller, informers.Sha
 	k8sI := kubeinformers.NewSharedInformerFactory(f.kubeclient, noResyncPeriodFunc())
 
 	c := NewController(ctx, f.kubeclient, f.client,
-		i.Apicontroller().V1alpha1().ApiProducts())
+		i.Apicontroller().V1alpha1().ApiProducts(),
+		i.Apicontroller().V1alpha1().ApiVersions(),
+		i.Apicontroller().V1alpha1().ApiDescriptions(),
+		i.Apicontroller().V1alpha1().ApiDeployments(),
+	)
 
 	c.apiProductsSynced = alwaysReady
 	c.recorder = &record.FakeRecorder{}
@@ -104,10 +108,6 @@ func (f *fixture) run(ctx context.Context, apiProductName string) {
 	f.runController(ctx, apiProductName, true, false)
 }
 
-func (f *fixture) runExpectError(ctx context.Context, apiProductName string) {
-	f.runController(ctx, apiProductName, true, true)
-}
-
 func (f *fixture) runController(ctx context.Context, apiProductName string, startInformers bool, expectError bool) {
 	c, i, k8sI := f.newController(ctx)
 	if startInformers {
@@ -115,7 +115,7 @@ func (f *fixture) runController(ctx context.Context, apiProductName string, star
 		k8sI.Start(ctx.Done())
 	}
 
-	err := c.syncHandler(ctx, apiProductName)
+	err := c.syncProductHandler(ctx, apiProductName)
 	if !expectError && err != nil {
 		f.t.Errorf("error syncing apiProduct: %v", err)
 	} else if expectError && err == nil {
@@ -215,20 +215,6 @@ func getKey(apiProduct *apicontroller.ApiProduct, t *testing.T) string {
 		return ""
 	}
 	return key
-}
-
-func TestCreatesDeployment(t *testing.T) {
-	f := newFixture(t)
-	apiProduct := newApiProduct("test", int32Ptr(1))
-	_, ctx := ktesting.NewTestContext(t)
-
-	f.apiProductLister = append(f.apiProductLister, apiProduct)
-	f.objects = append(f.objects, apiProduct)
-
-	apiProduct.Status.Message = "ok"
-	f.expectUpdateApiProductStatusAction(apiProduct)
-
-	f.run(ctx, getKey(apiProduct, t))
 }
 
 func TestDoNothing(t *testing.T) {

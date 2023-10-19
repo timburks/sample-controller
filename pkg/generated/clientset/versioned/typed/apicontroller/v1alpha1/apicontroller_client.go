@@ -28,6 +28,7 @@ import (
 
 type ApicontrollerV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ApiArtifactsGetter
 	ApiDeploymentsGetter
 	ApiDescriptionsGetter
 	ApiProductsGetter
@@ -37,6 +38,10 @@ type ApicontrollerV1alpha1Interface interface {
 // ApicontrollerV1alpha1Client is used to interact with features provided by the apicontroller.k8s.io group.
 type ApicontrollerV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ApicontrollerV1alpha1Client) ApiArtifacts(namespace string) ApiArtifactInterface {
+	return newApiArtifacts(c, namespace)
 }
 
 func (c *ApicontrollerV1alpha1Client) ApiDeployments(namespace string) ApiDeploymentInterface {

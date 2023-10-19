@@ -18,6 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
+// ApiArtifactListerExpansion allows custom methods to be added to
+// ApiArtifactLister.
+type ApiArtifactListerExpansion interface{}
+
+// ApiArtifactNamespaceListerExpansion allows custom methods to be added to
+// ApiArtifactNamespaceLister.
+type ApiArtifactNamespaceListerExpansion interface{}
+
 // ApiDeploymentListerExpansion allows custom methods to be added to
 // ApiDeploymentLister.
 type ApiDeploymentListerExpansion interface{}

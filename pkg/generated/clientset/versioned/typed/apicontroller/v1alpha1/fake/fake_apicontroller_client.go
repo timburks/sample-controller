@@ -28,6 +28,10 @@ type FakeApicontrollerV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeApicontrollerV1alpha1) ApiArtifacts(namespace string) v1alpha1.ApiArtifactInterface {
+	return &FakeApiArtifacts{c, namespace}
+}
+
 func (c *FakeApicontrollerV1alpha1) ApiDeployments(namespace string) v1alpha1.ApiDeploymentInterface {
 	return &FakeApiDeployments{c, namespace}
 }
