@@ -21,9 +21,9 @@ package externalversions
 import (
 	"fmt"
 
+	v1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
-	v1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -53,8 +53,14 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=apicontroller.k8s.io, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("apideployments"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apicontroller().V1alpha1().ApiDeployments().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("apidescriptions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apicontroller().V1alpha1().ApiDescriptions().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("apiproducts"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apicontroller().V1alpha1().ApiProducts().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("apiversions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apicontroller().V1alpha1().ApiVersions().Informer()}, nil
 
 	}
 

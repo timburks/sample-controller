@@ -19,17 +19,29 @@ limitations under the License.
 package fake
 
 import (
+	v1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
-	v1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
 )
 
 type FakeApicontrollerV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeApicontrollerV1alpha1) ApiDeployments(namespace string) v1alpha1.ApiDeploymentInterface {
+	return &FakeApiDeployments{c, namespace}
+}
+
+func (c *FakeApicontrollerV1alpha1) ApiDescriptions(namespace string) v1alpha1.ApiDescriptionInterface {
+	return &FakeApiDescriptions{c, namespace}
+}
+
 func (c *FakeApicontrollerV1alpha1) ApiProducts(namespace string) v1alpha1.ApiProductInterface {
 	return &FakeApiProducts{c, namespace}
+}
+
+func (c *FakeApicontrollerV1alpha1) ApiVersions(namespace string) v1alpha1.ApiVersionInterface {
+	return &FakeApiVersions{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate

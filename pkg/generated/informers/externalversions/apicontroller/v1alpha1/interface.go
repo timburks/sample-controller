@@ -24,8 +24,14 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// ApiDeployments returns a ApiDeploymentInformer.
+	ApiDeployments() ApiDeploymentInformer
+	// ApiDescriptions returns a ApiDescriptionInformer.
+	ApiDescriptions() ApiDescriptionInformer
 	// ApiProducts returns a ApiProductInformer.
 	ApiProducts() ApiProductInformer
+	// ApiVersions returns a ApiVersionInformer.
+	ApiVersions() ApiVersionInformer
 }
 
 type version struct {
@@ -39,7 +45,22 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
+// ApiDeployments returns a ApiDeploymentInformer.
+func (v *version) ApiDeployments() ApiDeploymentInformer {
+	return &apiDeploymentInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ApiDescriptions returns a ApiDescriptionInformer.
+func (v *version) ApiDescriptions() ApiDescriptionInformer {
+	return &apiDescriptionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
 // ApiProducts returns a ApiProductInformer.
 func (v *version) ApiProducts() ApiProductInformer {
 	return &apiProductInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ApiVersions returns a ApiVersionInformer.
+func (v *version) ApiVersions() ApiVersionInformer {
+	return &apiVersionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

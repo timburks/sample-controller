@@ -18,4 +18,10 @@ limitations under the License.
 
 package v1alpha1
 
+type ApiDeploymentExpansion interface{}
+
+type ApiDescriptionExpansion interface{}
+
 type ApiProductExpansion interface{}
+
+type ApiVersionExpansion interface{}

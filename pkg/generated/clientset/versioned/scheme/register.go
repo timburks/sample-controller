@@ -19,12 +19,12 @@ limitations under the License.
 package scheme
 
 import (
+	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 )
 
 var Scheme = runtime.NewScheme()

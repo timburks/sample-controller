@@ -32,59 +32,59 @@ import (
 	cache "k8s.io/client-go/tools/cache"
 )
 
-// ApiProductInformer provides access to a shared informer and lister for
-// ApiProducts.
-type ApiProductInformer interface {
+// ApiVersionInformer provides access to a shared informer and lister for
+// ApiVersions.
+type ApiVersionInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ApiProductLister
+	Lister() v1alpha1.ApiVersionLister
 }
 
-type apiProductInformer struct {
+type apiVersionInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
 	namespace        string
 }
 
-// NewApiProductInformer constructs a new informer for ApiProduct type.
+// NewApiVersionInformer constructs a new informer for ApiVersion type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewApiProductInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredApiProductInformer(client, namespace, resyncPeriod, indexers, nil)
+func NewApiVersionInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredApiVersionInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
-// NewFilteredApiProductInformer constructs a new informer for ApiProduct type.
+// NewFilteredApiVersionInformer constructs a new informer for ApiVersion type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredApiProductInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredApiVersionInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ApicontrollerV1alpha1().ApiProducts(namespace).List(context.TODO(), options)
+				return client.ApicontrollerV1alpha1().ApiVersions(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.ApicontrollerV1alpha1().ApiProducts(namespace).Watch(context.TODO(), options)
+				return client.ApicontrollerV1alpha1().ApiVersions(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&apicontrollerv1alpha1.ApiProduct{},
+		&apicontrollerv1alpha1.ApiVersion{},
 		resyncPeriod,
 		indexers,
 	)
 }
 
-func (f *apiProductInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredApiProductInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+func (f *apiVersionInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+	return NewFilteredApiVersionInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
-func (f *apiProductInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apicontrollerv1alpha1.ApiProduct{}, f.defaultInformer)
+func (f *apiVersionInformer) Informer() cache.SharedIndexInformer {
+	return f.factory.InformerFor(&apicontrollerv1alpha1.ApiVersion{}, f.defaultInformer)
 }
 
-func (f *apiProductInformer) Lister() v1alpha1.ApiProductLister {
-	return v1alpha1.NewApiProductLister(f.Informer().GetIndexer())
+func (f *apiVersionInformer) Lister() v1alpha1.ApiVersionLister {
+	return v1alpha1.NewApiVersionLister(f.Informer().GetIndexer())
 }

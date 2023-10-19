@@ -21,14 +21,17 @@ package v1alpha1
 import (
 	"net/http"
 
-	rest "k8s.io/client-go/rest"
 	v1alpha1 "k8s.io/api-controller/pkg/apis/apicontroller/v1alpha1"
 	"k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
+	rest "k8s.io/client-go/rest"
 )
 
 type ApicontrollerV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ApiDeploymentsGetter
+	ApiDescriptionsGetter
 	ApiProductsGetter
+	ApiVersionsGetter
 }
 
 // ApicontrollerV1alpha1Client is used to interact with features provided by the apicontroller.k8s.io group.
@@ -36,8 +39,20 @@ type ApicontrollerV1alpha1Client struct {
 	restClient rest.Interface
 }
 
+func (c *ApicontrollerV1alpha1Client) ApiDeployments(namespace string) ApiDeploymentInterface {
+	return newApiDeployments(c, namespace)
+}
+
+func (c *ApicontrollerV1alpha1Client) ApiDescriptions(namespace string) ApiDescriptionInterface {
+	return newApiDescriptions(c, namespace)
+}
+
 func (c *ApicontrollerV1alpha1Client) ApiProducts(namespace string) ApiProductInterface {
 	return newApiProducts(c, namespace)
+}
+
+func (c *ApicontrollerV1alpha1Client) ApiVersions(namespace string) ApiVersionInterface {
+	return newApiVersions(c, namespace)
 }
 
 // NewForConfig creates a new ApicontrollerV1alpha1Client for the given config.

@@ -19,14 +19,14 @@ limitations under the License.
 package fake
 
 import (
+	clientset "k8s.io/api-controller/pkg/generated/clientset/versioned"
+	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
+	fakeapicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
-	clientset "k8s.io/api-controller/pkg/generated/clientset/versioned"
-	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
-	fakeapicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.

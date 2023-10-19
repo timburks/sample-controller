@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"net/http"
 
+	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
-	apicontrollerv1alpha1 "k8s.io/api-controller/pkg/generated/clientset/versioned/typed/apicontroller/v1alpha1"
 )
 
 type Interface interface {
