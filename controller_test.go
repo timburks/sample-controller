@@ -51,8 +51,7 @@ type fixture struct {
 	// Objects to put in the store.
 	apiProductLister []*apicontroller.ApiProduct
 	// Actions expected to happen on the client.
-	kubeactions []core.Action
-	actions     []core.Action
+	actions []core.Action
 	// Objects from here preloaded into NewSimpleFake.
 	kubeobjects []runtime.Object
 	objects     []runtime.Object
@@ -223,7 +222,7 @@ func getKey(apiProduct *apicontroller.ApiProduct, t *testing.T) string {
 	return key
 }
 
-func TestDoNothing(t *testing.T) {
+func TestApplyProduct(t *testing.T) {
 	f := newFixture(t)
 	apiProduct := newApiProduct("test", int32Ptr(1))
 	_, ctx := ktesting.NewTestContext(t)
