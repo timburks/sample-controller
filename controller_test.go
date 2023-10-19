@@ -92,9 +92,15 @@ func (f *fixture) newController(ctx context.Context) (*Controller, informers.Sha
 		i.Apicontroller().V1alpha1().ApiVersions(),
 		i.Apicontroller().V1alpha1().ApiDescriptions(),
 		i.Apicontroller().V1alpha1().ApiDeployments(),
+		i.Apicontroller().V1alpha1().ApiArtifacts(),
 	)
 
 	c.apiProductsSynced = alwaysReady
+	c.apiVersionsSynced = alwaysReady
+	c.apiDescriptionsSynced = alwaysReady
+	c.apiDeploymentsSynced = alwaysReady
+	c.apiArtifactsSynced = alwaysReady
+
 	c.recorder = &record.FakeRecorder{}
 
 	for _, f := range f.apiProductLister {
@@ -188,7 +194,7 @@ func checkAction(expected, actual core.Action, t *testing.T) {
 
 // filterInformerActions filters list and watch actions for testing resources.
 // Since list and watch don't change resource state we can filter it to lower
-// nose level in our tests.
+// noise level in our tests.
 func filterInformerActions(actions []core.Action) []core.Action {
 	ret := []core.Action{}
 	for _, action := range actions {
@@ -225,8 +231,9 @@ func TestDoNothing(t *testing.T) {
 	f.apiProductLister = append(f.apiProductLister, apiProduct)
 	f.objects = append(f.objects, apiProduct)
 
-	apiProduct.Status.Message = "ok"
-	f.expectUpdateApiProductStatusAction(apiProduct)
+	finalApiProduct := apiProduct.DeepCopy()
+	finalApiProduct.Status.Message = "ok product"
+	f.expectUpdateApiProductStatusAction(finalApiProduct)
 	f.run(ctx, getKey(apiProduct, t))
 }
 
