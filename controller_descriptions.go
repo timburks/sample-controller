@@ -126,7 +126,7 @@ func (c *Controller) updateApiDescriptionStatus(apiDescription *apiv1alpha1.ApiD
 	// we must use Update instead of UpdateStatus to update the Status block of the ApiDescription resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiDescriptions(apiDescription.Namespace).UpdateStatus(context.TODO(), apiDescriptionCopy, metav1.UpdateOptions{})
+	_, err := c.clientset.ApicontrollerV1alpha1().ApiDescriptions(apiDescription.Namespace).UpdateStatus(context.TODO(), apiDescriptionCopy, metav1.UpdateOptions{})
 	return err
 }
 

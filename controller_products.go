@@ -126,7 +126,7 @@ func (c *Controller) updateApiProductStatus(apiProduct *apiv1alpha1.ApiProduct) 
 	// we must use Update instead of UpdateStatus to update the Status block of the ApiProduct resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiProducts(apiProduct.Namespace).UpdateStatus(context.TODO(), apiProductCopy, metav1.UpdateOptions{})
+	_, err := c.clientset.ApicontrollerV1alpha1().ApiProducts(apiProduct.Namespace).UpdateStatus(context.TODO(), apiProductCopy, metav1.UpdateOptions{})
 	return err
 }
 

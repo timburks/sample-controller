@@ -126,7 +126,7 @@ func (c *Controller) updateApiDeploymentStatus(apiDeployment *apiv1alpha1.ApiDep
 	// we must use Update instead of UpdateStatus to update the Status block of the ApiDeployment resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiDeployments(apiDeployment.Namespace).UpdateStatus(context.TODO(), apiDeploymentCopy, metav1.UpdateOptions{})
+	_, err := c.clientset.ApicontrollerV1alpha1().ApiDeployments(apiDeployment.Namespace).UpdateStatus(context.TODO(), apiDeploymentCopy, metav1.UpdateOptions{})
 	return err
 }
 

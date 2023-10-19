@@ -34,7 +34,7 @@ import (
 
 	clientset "k8s.io/api-controller/pkg/generated/clientset/versioned"
 	apischeme "k8s.io/api-controller/pkg/generated/clientset/versioned/scheme"
-	informers "k8s.io/api-controller/pkg/generated/informers/externalversions/apicontroller/v1alpha1"
+	"k8s.io/api-controller/pkg/generated/informers/externalversions/apicontroller"
 	listers "k8s.io/api-controller/pkg/generated/listers/apicontroller/v1alpha1"
 )
 
@@ -43,14 +43,8 @@ const controllerAgentName = "api-controller"
 const (
 	// SuccessSynced is used as part of the Event 'reason' when an ApiProduct is synced
 	SuccessSynced = "Synced"
-	// ErrResourceExists is used as part of the Event 'reason' when an ApiProduct fails
-	// to sync due to a Deployment of the same name already existing.
-	ErrResourceExists = "ErrResourceExists"
 
-	// MessageResourceExists is the message used for Events when a resource
-	// fails to sync due to a Deployment already existing
-	MessageResourceExists = "Resource %q already exists and is not managed by ApiProduct"
-	// MessageResourceSynced is the message used for an Event fired when an ApiProduct
+	// MessageResourceSynced is the message used for an Event fired when a custom resource
 	// is synced successfully
 	MessageProductSynced     = "ApiProduct synced successfully"
 	MessageVersionSynced     = "ApiVersion synced successfully"
@@ -59,22 +53,23 @@ const (
 	MessageArtifactSynced    = "ApiArtifact synced successfully"
 )
 
-// Controller is the controller implementation for ApiProduct resources
+// Controller is the controller implementation for all of our custom resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
 	kubeclientset kubernetes.Interface
-	// sampleclientset is a clientset for our own API group
-	sampleclientset clientset.Interface
+	// clientset is a clientset for our own API group
+	clientset clientset.Interface
 
 	apiProductsLister     listers.ApiProductLister
-	apiProductsSynced     cache.InformerSynced
 	apiVersionsLister     listers.ApiVersionLister
-	apiVersionsSynced     cache.InformerSynced
 	apiDescriptionsLister listers.ApiDescriptionLister
-	apiDescriptionsSynced cache.InformerSynced
 	apiDeploymentsLister  listers.ApiDeploymentLister
-	apiDeploymentsSynced  cache.InformerSynced
 	apiArtifactsLister    listers.ApiArtifactLister
+
+	apiProductsSynced     cache.InformerSynced
+	apiVersionsSynced     cache.InformerSynced
+	apiDescriptionsSynced cache.InformerSynced
+	apiDeploymentsSynced  cache.InformerSynced
 	apiArtifactsSynced    cache.InformerSynced
 
 	// workqueue is a rate limited work queue. This is used to queue work to be
@@ -93,18 +88,20 @@ type Controller struct {
 	recorder record.EventRecorder
 }
 
-// NewController returns a new sample controller
+// NewController returns a new controller
 func NewController(
 	ctx context.Context,
 	kubeclientset kubernetes.Interface,
-	sampleclientset clientset.Interface,
-	apiProductInformer informers.ApiProductInformer,
-	apiVersionInformer informers.ApiVersionInformer,
-	apiDescriptionInformer informers.ApiDescriptionInformer,
-	apiDeploymentInformer informers.ApiDeploymentInformer,
-	apiArtifactInformer informers.ApiArtifactInformer,
+	clientset clientset.Interface,
+	informers apicontroller.Interface,
 ) *Controller {
 	logger := klog.FromContext(ctx)
+
+	apiProductInformer := informers.V1alpha1().ApiProducts()
+	apiVersionInformer := informers.V1alpha1().ApiVersions()
+	apiDescriptionInformer := informers.V1alpha1().ApiDescriptions()
+	apiDeploymentInformer := informers.V1alpha1().ApiDeployments()
+	apiArtifactInformer := informers.V1alpha1().ApiArtifacts()
 
 	// Create event broadcaster
 	// Add api-controller types to the default Kubernetes Scheme so Events can be
@@ -118,18 +115,19 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:   kubeclientset,
-		sampleclientset: sampleclientset,
+		kubeclientset: kubeclientset,
+		clientset:     clientset,
 
 		apiProductsLister:     apiProductInformer.Lister(),
-		apiProductsSynced:     apiProductInformer.Informer().HasSynced,
 		apiVersionsLister:     apiVersionInformer.Lister(),
-		apiVersionsSynced:     apiVersionInformer.Informer().HasSynced,
 		apiDescriptionsLister: apiDescriptionInformer.Lister(),
-		apiDescriptionsSynced: apiDescriptionInformer.Informer().HasSynced,
 		apiDeploymentsLister:  apiDeploymentInformer.Lister(),
-		apiDeploymentsSynced:  apiDeploymentInformer.Informer().HasSynced,
 		apiArtifactsLister:    apiArtifactInformer.Lister(),
+
+		apiProductsSynced:     apiProductInformer.Informer().HasSynced,
+		apiVersionsSynced:     apiVersionInformer.Informer().HasSynced,
+		apiDescriptionsSynced: apiDescriptionInformer.Informer().HasSynced,
+		apiDeploymentsSynced:  apiDeploymentInformer.Informer().HasSynced,
 		apiArtifactsSynced:    apiArtifactInformer.Informer().HasSynced,
 
 		productsWorkqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ApiProducts"),
@@ -187,11 +185,13 @@ func NewController(
 // workers to finish processing their current work items.
 func (c *Controller) Run(ctx context.Context, workers int) error {
 	defer utilruntime.HandleCrash()
+
 	defer c.productsWorkqueue.ShutDown()
 	defer c.versionsWorkqueue.ShutDown()
 	defer c.descriptionsWorkqueue.ShutDown()
 	defer c.deploymentsWorkqueue.ShutDown()
 	defer c.artifactsWorkqueue.ShutDown()
+
 	logger := klog.FromContext(ctx)
 
 	// Start the informer factories to begin populating the informer caches
@@ -199,42 +199,23 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 
 	// Wait for the caches to be synced before starting workers
 	logger.Info("Waiting for informer caches to sync")
-
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiProductsSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
-	}
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiVersionsSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
-	}
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiDescriptionsSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
-	}
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiDeploymentsSynced); !ok {
-		return fmt.Errorf("failed to wait for caches to sync")
-	}
-	if ok := cache.WaitForCacheSync(ctx.Done(), c.apiArtifactsSynced); !ok {
+	if ok := cache.WaitForCacheSync(ctx.Done(),
+		c.apiProductsSynced,
+		c.apiVersionsSynced,
+		c.apiDescriptionsSynced,
+		c.apiDeploymentsSynced,
+		c.apiArtifactsSynced,
+	); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
 	logger.Info("Starting workers", "count", workers)
-	// Launch two workers to process ApiProduct resources
+	// Launch workers to process each custom resource type
 	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runProductWorker, time.Second)
-	}
-	// Launch two workers to process ApiVersion resources
-	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runVersionWorker, time.Second)
-	}
-	// Launch two workers to process ApiDescription resources
-	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runDescriptionWorker, time.Second)
-	}
-	// Launch two workers to process ApiDeployment resources
-	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runDeploymentWorker, time.Second)
-	}
-	// Launch two workers to process ApiArtifact resources
-	for i := 0; i < workers; i++ {
 		go wait.UntilWithContext(ctx, c.runArtifactWorker, time.Second)
 	}
 

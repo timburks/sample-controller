@@ -126,7 +126,7 @@ func (c *Controller) updateApiArtifactStatus(apiArtifact *apiv1alpha1.ApiArtifac
 	// we must use Update instead of UpdateStatus to update the Status block of the ApiArtifact resource.
 	// UpdateStatus will not allow changes to the Spec of the resource,
 	// which is ideal for ensuring nothing other than resource status has been updated.
-	_, err := c.sampleclientset.ApicontrollerV1alpha1().ApiArtifacts(apiArtifact.Namespace).UpdateStatus(context.TODO(), apiArtifactCopy, metav1.UpdateOptions{})
+	_, err := c.clientset.ApicontrollerV1alpha1().ApiArtifacts(apiArtifact.Namespace).UpdateStatus(context.TODO(), apiArtifactCopy, metav1.UpdateOptions{})
 	return err
 }
 
